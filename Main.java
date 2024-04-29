@@ -1,69 +1,75 @@
-import java.util.Arrays;
+// ProducerConsumer.java
+import java.util.LinkedList;
+import java.util.Queue;
 
-//TIP To <b>Run</b> code, press <shortcut actionId="Run"/> or
-// click the <icon src="AllIcons.Actions.Execute"/> icon in the gutter.
 public class Main {
+    private static final int BUFFER_SIZE = 5;
+    private static final Queue < Integer > buffer = new LinkedList < > ();
 
-    private static final int ARRAY_SIZE = 400;
-    private static final int NUM_THREADS = 4;
-    public static void main(String[] args)  {
+    public static void main(String[] args) {
+        Thread producerThread = new Thread(new Producer());
+        Thread consumerThread = new Thread(new Consumer());
 
-          int array[] = createArray();
-          Thread[] threads = new Thread[NUM_THREADS];
-          int segmentSize = ARRAY_SIZE/NUM_THREADS;
-          for(int i =0;i< NUM_THREADS;i++){
-              int startIndex = i*segmentSize;
-              int endIndex = (i==NUM_THREADS-1)?ARRAY_SIZE-1:startIndex+segmentSize-1;
-              threads[i] = new Thread(()->{
-                 Arrays.sort(array,startIndex,endIndex+1);
-              });
-              threads[i].start();
-
-          }
-          for(Thread thread : threads){
-              try {
-                  thread.join();
-              } catch (InterruptedException e) {
-                  throw new RuntimeException(e);
-              }
-          }
-          mergeSort(array,0,ARRAY_SIZE-1);
-          System.out.println(Arrays.toString(array));
+        producerThread.start();
+        consumerThread.start();
     }
 
-    private static int[] createArray(){
-        int array[]  = new int[ARRAY_SIZE];
-         for(int i =0;i<ARRAY_SIZE;i++){
-             array[i] = (int)(Math.random()*400);
-         }
-         return array;
-    }
-    private static void mergeSort(int[] array, int left, int right){
-            if(left<right) {
-                int mid = (left+right)/2;
-                mergeSort(array,left,mid);
-                mergeSort(array,mid+1,right);
-                merge(array,left,mid,right);
+    static class Producer implements Runnable {
+        public void run() {
+            int value = 0;
+            while (true) {
+                synchronized(buffer) {
+                    // Wait if the buffer is full
+                    while (buffer.size() == BUFFER_SIZE) {
+                        try {
+                            buffer.wait();
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
+                    }
 
-    }}
+                    System.out.println("Producer produced: " + value);
+                    buffer.add(value++);
 
-    private static void merge(int[] array, int left , int mid, int right){
-        int[] temp = new int[right-left+1];
-        int i = left, j = mid+1,k =0;
-        while(i<=mid&&j<=right){
-            if(array[i]<=array[j]){
-                temp[k++] = array[i++];
+                    // Notify the consumer that an item is produced
+                    buffer.notify();
+
+                    try {
+                        Thread.sleep(1000);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
             }
-            else temp[k++] = array[j++];
+        }
+    }
 
-        }
-        while (i <= mid) {
-            temp[k++] = array[i++];
-        }
+    static class Consumer implements Runnable {
+        public void run() {
+            while (true) {
+                synchronized(buffer) {
+                    // Wait if the buffer is empty
+                    while (buffer.isEmpty()) {
+                        try {
+                            buffer.wait();
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
+                    }
 
-        while (j <= right) {
-            temp[k++] = array[j++];
+                    int value = buffer.poll();
+                    System.out.println("Consumer consumed: " + value);
+
+                    // Notify the producer that an item is consumed
+                    buffer.notify();
+
+                    try {
+                        Thread.sleep(1000);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
         }
-        System.arraycopy(temp, 0, array, left, temp.length);
     }
 }
