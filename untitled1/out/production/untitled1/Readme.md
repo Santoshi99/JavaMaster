@@ -1,4 +1,5 @@
 
+![Screenshot (10)](https://github.com/Santoshi99/JavaMaster/assets/47233668/32071c40-956e-477b-b1b8-567a1f8be5a8)
 Enter no of players
 3
 Enter player names
